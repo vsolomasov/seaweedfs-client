@@ -1,0 +1,16 @@
+version: "3.8"
+services:
+  master:
+    image: chrislusf/seaweedfs
+    ports:
+      - 9333:9333
+      - 19333:19333
+    command: "master -ip=master"
+  volume:
+    image: chrislusf/seaweedfs
+    ports:
+      - 8080:8080
+      - 18080:18080
+    command: 'volume -mserver="master:9333" -port=8080 -publicUrl="http://127.0.0.1:8080"'
+    depends_on:
+      - master
