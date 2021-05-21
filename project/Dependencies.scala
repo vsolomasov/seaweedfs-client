@@ -25,8 +25,11 @@ object Dependencies {
     val Generic = "io.circe" %% "circe-generic" % version
   }
 
-  object Logging {
-    val logback = "ch.qos.logback" % "logback-classic" % "1.2.3"
-    val log4cats = "io.chrisdavenport" %% "log4cats-slf4j" % "1.1.1"
+  object Log4Cats {
+    private val version = "1.1.1"
+    val Core = "io.chrisdavenport" %% "log4cats-core" % version
+    val Slf4j = "io.chrisdavenport" %% "log4cats-slf4j" % version
   }
+
+  val Logback = "ch.qos.logback" % "logback-classic" % "1.2.3"
 }

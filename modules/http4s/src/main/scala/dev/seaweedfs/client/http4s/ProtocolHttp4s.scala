@@ -1,13 +1,12 @@
-package dev.seaweedfs.client.interpreters
+package dev.seaweedfs.client.http4s
 
-import cats.effect.{BracketThrow, Sync}
+import cats.effect.BracketThrow
 import cats.syntax.all._
 import cats.{Applicative, Show}
 import dev.seaweedfs.client.Protocol
-import dev.seaweedfs.client.Protocol.{AssignInfo, WriteInfo}
+import dev.seaweedfs.client.Protocol.{AssignInfo, Location, LocationInfo, WriteInfo}
 import dev.seaweedfs.client.domain._
 import io.chrisdavenport.log4cats.Logger
-import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
 import org.http4s.Method._
 import org.http4s._
 import org.http4s.circe.{JsonDecoder, toMessageSynax}
@@ -16,7 +15,7 @@ import org.http4s.client.dsl.Http4sClientDsl
 import org.http4s.headers.`Content-Type`
 import org.http4s.multipart.{Multipart, Part}
 
-class ProtocolHttp4s[F[_]: JsonDecoder: BracketThrow: Logger] private (
+class ProtocolHttp4s[F[_]: JsonDecoder: BracketThrow: Logger](
   seaweedFSConfig: SeaweedFSConfig,
   client: Client[F]
 ) extends Protocol[F]
@@ -54,6 +53,28 @@ class ProtocolHttp4s[F[_]: JsonDecoder: BracketThrow: Logger] private (
       }
     } yield response
   }
+
+  override def location(volumeId: String): F[LocationInfo] = {
+    for {
+      uri <- Uri.fromString(s"http://${seaweedFSConfig.origin}/dir/lookup?volumeId=$volumeId").liftTo[F]
+      request <- GET(uri)
+      result <- runWithLog[LocationInfo](request) {
+        case response if response.status == Status.Ok => response.asJsonDecode[LocationInfo]
+        case response => ResponseError(response.status.code, response.status.reason).raiseError
+      }
+    } yield result
+  }
+
+  override def remove(fid: String, location: Location): F[Unit] = {
+    for {
+      uri <- Uri.fromString(s"${location.publicUrl}/$fid").liftTo[F]
+      request <- DELETE(uri)
+      _ <- runWithLog[Unit](request) {
+        case response if response.status == Status.Accepted => ().pure[F]
+        case response => ResponseError(response.status.code, response.status.reason).raiseError[F, Unit]
+      }
+    } yield ()
+  }
 }
 
 object ProtocolHttp4s {
@@ -73,14 +94,5 @@ object ProtocolHttp4s {
     case ContentType.Jpeg => `Content-Type`(MediaType.image.jpeg).pure[F]
     case ContentType.Png => `Content-Type`(MediaType.image.png).pure[F]
     case ContentType.Tiff => `Content-Type`(MediaType.image.tiff).pure[F]
-  }
-
-  def make[F[_]: Sync](
-    seaweedFSConfig: SeaweedFSConfig,
-    client: Client[F]
-  ): F[Protocol[F]] = {
-    Slf4jLogger.create[F].flatMap { implicit logger =>
-      Sync[F].delay(new ProtocolHttp4s[F](seaweedFSConfig, client))
-    }
   }
 }
