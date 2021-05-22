@@ -1,11 +1,13 @@
 import Dependencies._
 
-ThisBuild / version := "dev"
+ThisBuild / version := "0.0.1"
 ThisBuild / scalaVersion := "2.13.5"
+ThisBuild / organization := "com.github.vsolomasov"
 
 val commonSettings = Seq(
   organizationName := "SeaweedFS client for Scala",
   startYear := Some(2021),
+  Compile / packageDoc / publishArtifact := false,
   addCompilerPlugin(CompilerPlugin.KindProjector),
   addCompilerPlugin(CompilerPlugin.BetterMonadic)
 )
@@ -13,19 +15,19 @@ val commonSettings = Seq(
 lazy val `seaweedfs-root` = project
   .in(file("."))
   .aggregate(
-    `seaweedfs-client`,
+    `seaweedfs-core`,
     `seaweedfs-http4s`,
     `seaweedfs-example`
   )
 
-lazy val `seaweedfs-client` = project
-  .in(file("modules/client"))
+lazy val `seaweedfs-core` = project
+  .in(file("modules/core"))
   .settings(commonSettings)
   .settings(libraryDependencies ++= Seq(Cats.Core, Circe.Parser, Circe.Generic, Log4Cats.Core))
 
 lazy val `seaweedfs-http4s` = project
   .in(file("modules/http4s"))
-  .dependsOn(`seaweedfs-client`)
+  .dependsOn(`seaweedfs-core`)
   .settings(commonSettings)
   .settings(libraryDependencies ++= Seq(Http4s.Dsl, Http4s.Client, Http4s.Circe))
 
