@@ -9,14 +9,4 @@ object domain {
   case class ResponseError(code: Int, reason: String) extends Exception {
     override def getMessage: String = s"Code: $code, Reason: $reason"
   }
-
-  sealed trait ContentType
-  object ContentType {
-    case object Jpeg extends ContentType
-    case object Png extends ContentType
-    case object Gif extends ContentType
-    case object Tiff extends ContentType
-  }
-
-  case class Photo(name: String, contentType: ContentType, body: Array[Byte])
 }

@@ -4,18 +4,19 @@ import cats.MonadThrow
 import cats.syntax.all._
 import dev.seaweedfs.client.Commands.PhotoInfo
 import dev.seaweedfs.client.interpreters.CommandsInterpreter.decomposeFid
-import dev.seaweedfs.client.{Commands, Protocol, domain}
+import dev.seaweedfs.client.{Commands, Protocol}
 
+import java.io.File
 import scala.util.Try
 
 class CommandsInterpreter[F[_]: MonadThrow](
   protocol: Protocol[F]
 ) extends Commands[F] {
 
-  override def save(photo: domain.Photo): F[PhotoInfo] = {
+  override def save(file: File): F[PhotoInfo] = {
     for {
       assignInfo <- protocol.getAssign
-      writeInfo <- protocol.save(assignInfo, photo)
+      writeInfo <- protocol.save(assignInfo, file)
     } yield PhotoInfo(assignInfo, writeInfo)
   }
 

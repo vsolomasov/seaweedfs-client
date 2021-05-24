@@ -1,6 +1,6 @@
 import Dependencies._
 
-ThisBuild / version := "0.0.1"
+ThisBuild / version := "dev"
 ThisBuild / scalaVersion := "2.13.5"
 ThisBuild / organization := "com.github.vsolomasov"
 
@@ -29,10 +29,10 @@ lazy val `seaweedfs-http4s` = project
   .in(file("modules/http4s"))
   .dependsOn(`seaweedfs-core`)
   .settings(commonSettings)
-  .settings(libraryDependencies ++= Seq(Http4s.Dsl, Http4s.Client, Http4s.Circe))
+  .settings(libraryDependencies ++= Seq(Http4s.Dsl, Http4s.Client, Http4s.Circe, Log4Cats.Slf4j))
 
 lazy val `seaweedfs-example` = project
   .in(file("modules/example"))
   .dependsOn(`seaweedfs-http4s`)
   .settings(commonSettings)
-  .settings(libraryDependencies ++= Seq(Log4Cats.Slf4j, Logback))
+  .settings(libraryDependencies += Logback)

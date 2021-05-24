@@ -1,23 +1,29 @@
 package dev.seaweedfs.client.http4s
 
-import cats.effect.BracketThrow
+import cats.Show
+import cats.effect.{Blocker, BracketThrow, Sync}
 import cats.syntax.all._
-import cats.{Applicative, Show}
 import dev.seaweedfs.client.Protocol
 import dev.seaweedfs.client.Protocol.{AssignInfo, Location, LocationInfo, WriteInfo}
 import dev.seaweedfs.client.domain._
+import dev.seaweedfs.client.http4s.part.PartUtil
 import io.chrisdavenport.log4cats.Logger
+import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
 import org.http4s.Method._
 import org.http4s._
 import org.http4s.circe.{JsonDecoder, toMessageSynax}
 import org.http4s.client.Client
 import org.http4s.client.dsl.Http4sClientDsl
-import org.http4s.headers.`Content-Type`
-import org.http4s.multipart.{Multipart, Part}
+import org.http4s.multipart.Multipart
 
-class ProtocolHttp4s[F[_]: JsonDecoder: BracketThrow: Logger](
+import java.io.File
+
+private[http4s] class ProtocolHttp4s[F[_]: JsonDecoder: BracketThrow: Logger] private (
   seaweedFSConfig: SeaweedFSConfig,
-  client: Client[F]
+  client: Client[F],
+  partUtil: PartUtil[F]
+)(
+  blocker: Blocker
 ) extends Protocol[F]
   with Http4sClientDsl[F] {
 
@@ -40,11 +46,10 @@ class ProtocolHttp4s[F[_]: JsonDecoder: BracketThrow: Logger](
     } yield response
   }
 
-  override def save(assignInfo: AssignInfo, photo: Photo): F[WriteInfo] = {
+  override def save(assignInfo: AssignInfo, file: File): F[WriteInfo] = {
     for {
-      header <- getHeader(photo.contentType)
-      stream = fs2.Stream.emits(photo.body)
-      multipart = Multipart[F](Vector(Part(Headers.of(header), stream)))
+      fileData <- partUtil.create(file, blocker)
+      multipart = Multipart[F](Vector(fileData))
       uri <- Uri.fromString(s"${assignInfo.publicUrl}/${assignInfo.fid}").liftTo[F]
       request <- POST(multipart, uri)
       response <- runWithLog[WriteInfo](request.withHeaders(multipart.headers)) {
@@ -79,6 +84,16 @@ class ProtocolHttp4s[F[_]: JsonDecoder: BracketThrow: Logger](
 
 object ProtocolHttp4s {
 
+  def make[F[_]: Sync](
+    seaweedFSConfig: SeaweedFSConfig,
+    client: Client[F],
+    partUtil: PartUtil[F]
+  )(
+    blocker: Blocker
+  ): F[ProtocolHttp4s[F]] = Slf4jLogger.create[F].flatMap { implicit logger =>
+    Sync[F].delay(new ProtocolHttp4s[F](seaweedFSConfig, client, partUtil)(blocker))
+  }
+
   implicit def requestShow[F[_]]: Show[Request[F]] = request => {
     import request._
     s"$httpVersion $method $uri $headers $body"
@@ -87,12 +102,5 @@ object ProtocolHttp4s {
   implicit def responseShow[F[_]]: Show[Response[F]] = response => {
     import response._
     s"$httpVersion ${status.code} ${status.reason} $headers $body"
-  }
-
-  def getHeader[F[_]: Applicative](contentType: ContentType): F[`Content-Type`] = contentType match {
-    case ContentType.Gif => `Content-Type`(MediaType.image.gif).pure[F]
-    case ContentType.Jpeg => `Content-Type`(MediaType.image.jpeg).pure[F]
-    case ContentType.Png => `Content-Type`(MediaType.image.png).pure[F]
-    case ContentType.Tiff => `Content-Type`(MediaType.image.tiff).pure[F]
   }
 }
