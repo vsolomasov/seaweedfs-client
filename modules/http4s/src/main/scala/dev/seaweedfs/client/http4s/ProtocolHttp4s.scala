@@ -35,9 +35,10 @@ private[http4s] class ProtocolHttp4s[F[_]: JsonDecoder: BracketThrow: Logger] pr
     }
   }
 
-  override def getAssign: F[AssignInfo] = {
+  override def getAssign(ttl: Option[Long]): F[AssignInfo] = {
     for {
-      uri <- Uri.fromString(s"http://${seaweedFSConfig.origin}/dir/assign").liftTo[F]
+      rawUri <- Uri.fromString(s"http://${seaweedFSConfig.origin}/dir/assign").liftTo[F]
+      uri = ttl.fold(rawUri)(ttl => rawUri.withQueryParam("ttl", s"${ttl}m"))
       request <- GET(uri)
       response <- runWithLog[AssignInfo](request) {
         case response if response.status === Status.Ok => response.asJsonDecode[AssignInfo]
@@ -46,11 +47,12 @@ private[http4s] class ProtocolHttp4s[F[_]: JsonDecoder: BracketThrow: Logger] pr
     } yield response
   }
 
-  override def save(assignInfo: AssignInfo, file: File): F[WriteInfo] = {
+  override def save(assignInfo: AssignInfo, file: File, ttl: Option[Long]): F[WriteInfo] = {
     for {
       fileData <- partUtil.create(file, blocker)
       multipart = Multipart[F](Vector(fileData))
-      uri <- Uri.fromString(s"${assignInfo.publicUrl}/${assignInfo.fid}").liftTo[F]
+      rawUri <- Uri.fromString(s"${assignInfo.publicUrl}/${assignInfo.fid}").liftTo[F]
+      uri = ttl.fold(rawUri)(ttl => rawUri.withQueryParam("ttl", s"${ttl}m"))
       request <- POST(multipart, uri)
       response <- runWithLog[WriteInfo](request.withHeaders(multipart.headers)) {
         case response if response.status == Status.Created => response.asJsonDecode[WriteInfo]

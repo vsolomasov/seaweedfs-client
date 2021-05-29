@@ -13,10 +13,10 @@ class CommandsInterpreter[F[_]: MonadThrow](
   protocol: Protocol[F]
 ) extends Commands[F] {
 
-  override def save(file: File): F[PhotoInfo] = {
+  override def save(file: File, ttl: Option[Long]): F[PhotoInfo] = {
     for {
-      assignInfo <- protocol.getAssign
-      writeInfo <- protocol.save(assignInfo, file)
+      assignInfo <- protocol.getAssign(ttl)
+      writeInfo <- protocol.save(assignInfo, file, ttl)
     } yield PhotoInfo(assignInfo, writeInfo)
   }
 

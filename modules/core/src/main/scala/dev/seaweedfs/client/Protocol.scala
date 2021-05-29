@@ -7,8 +7,8 @@ import io.circe.generic.semiauto.deriveDecoder
 import java.io.File
 
 trait Protocol[F[_]] {
-  def getAssign: F[AssignInfo]
-  def save(assignInfo: AssignInfo, file: File): F[WriteInfo]
+  def getAssign(ttl: Option[Long]): F[AssignInfo]
+  def save(assignInfo: AssignInfo, file: File, ttl: Option[Long]): F[WriteInfo]
   def location(volumeId: String): F[LocationInfo]
   def remove(fid: String, location: Location): F[Unit]
 }

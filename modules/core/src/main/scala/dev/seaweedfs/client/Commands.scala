@@ -6,7 +6,7 @@ import dev.seaweedfs.client.Protocol.{AssignInfo, WriteInfo}
 import java.io.File
 
 trait Commands[F[_]] {
-  def save(file: File): F[PhotoInfo]
+  def save(file: File, ttl: Option[Long]): F[PhotoInfo]
   def search(fid: String): F[Option[String]]
   def remove(fid: String): F[Unit]
 }
