@@ -5,12 +5,14 @@ import io.circe.Decoder
 import io.circe.generic.semiauto.deriveDecoder
 
 import java.io.File
+import scala.concurrent.duration.FiniteDuration
 
 trait Protocol[F[_]] {
-  def getAssign(ttl: Option[Long]): F[AssignInfo]
-  def save(assignInfo: AssignInfo, file: File, ttl: Option[Long]): F[WriteInfo]
+  def getAssign(ttl: Option[FiniteDuration]): F[AssignInfo]
+  def save(assignInfo: AssignInfo, file: File, ttl: Option[FiniteDuration]): F[WriteInfo]
   def location(volumeId: String): F[LocationInfo]
   def remove(fid: String, location: Location): F[Unit]
+  def extract(fid: String, location: Location): F[File]
 }
 
 object Protocol {

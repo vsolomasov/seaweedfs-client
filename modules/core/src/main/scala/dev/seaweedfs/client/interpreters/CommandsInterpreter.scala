@@ -2,22 +2,35 @@ package dev.seaweedfs.client.interpreters
 
 import cats.MonadThrow
 import cats.syntax.all._
-import dev.seaweedfs.client.Commands.PhotoInfo
+import dev.seaweedfs.client.Commands.FileInfo
 import dev.seaweedfs.client.interpreters.CommandsInterpreter.decomposeFid
 import dev.seaweedfs.client.{Commands, Protocol}
 
 import java.io.File
+import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
 
 class CommandsInterpreter[F[_]: MonadThrow](
   protocol: Protocol[F]
 ) extends Commands[F] {
+  private val ME: MonadThrow[F] = implicitly
 
-  override def save(file: File, ttl: Option[Long]): F[PhotoInfo] = {
+  override def save(file: File, ttl: Option[FiniteDuration]): F[FileInfo] = {
     for {
       assignInfo <- protocol.getAssign(ttl)
       writeInfo <- protocol.save(assignInfo, file, ttl)
-    } yield PhotoInfo(assignInfo, writeInfo)
+    } yield FileInfo(assignInfo, writeInfo)
+  }
+
+  override def changeTtl(fid: String, ttl: Option[FiniteDuration]): F[FileInfo] = {
+    for {
+      (volumeId, _) <- decomposeFid(fid)
+      locationInfo <- protocol.location(volumeId)
+      location <- ME.fromOption(locationInfo.locations.headOption, new Exception("File not found!"))
+      file <- protocol.extract(fid, location)
+      fileInfo <- save(file, ttl)
+//      _ <- locationInfo.locations.traverse(protocol.remove(fid, _))
+    } yield fileInfo
   }
 
   override def search(fid: String): F[Option[String]] = {

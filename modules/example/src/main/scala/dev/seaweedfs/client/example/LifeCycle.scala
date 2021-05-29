@@ -4,7 +4,7 @@ import cats.data.Kleisli
 import cats.effect.{ConcurrentEffect, ContextShift, Resource, Sync}
 import cats.syntax.all._
 import dev.seaweedfs.client.Commands
-import dev.seaweedfs.client.Commands.PhotoInfo
+import dev.seaweedfs.client.Commands.FileInfo
 import io.chrisdavenport.log4cats.Logger
 
 import java.io.File
@@ -17,7 +17,7 @@ trait LifeCycle {
   }
 
   private def saveFile[F[_]: Sync: Logger](implicit commands: Commands[F]) = {
-    Kleisli.apply[F, String, PhotoInfo] { path =>
+    Kleisli.apply[F, String, FileInfo] { path =>
       for {
         file <- Sync[F].delay(new File(path))
         photoInfo <- commands.save(file, none)
@@ -27,7 +27,7 @@ trait LifeCycle {
   }
 
   private def getUrl[F[_]: Sync: Logger](implicit commands: Commands[F]) = {
-    Kleisli.apply[F, PhotoInfo, Unit] { photoInfo =>
+    Kleisli.apply[F, FileInfo, Unit] { photoInfo =>
       commands.search(photoInfo.fid).flatMap {
         case Some(url) => Logger[F].info(s"File path: $url")
         case None => Logger[F].warn(s"File with fid ${photoInfo.fid} not found")
@@ -36,6 +36,6 @@ trait LifeCycle {
   }
 
   private def removeFile[F[_]: Sync: Logger](implicit commands: Commands[F]) = {
-    Kleisli.apply[F, PhotoInfo, Unit](photoInfo => commands.remove(photoInfo.fid) *> Logger[F].info("File was deleted"))
+    Kleisli.apply[F, FileInfo, Unit](photoInfo => commands.remove(photoInfo.fid) *> Logger[F].info("File was deleted"))
   }
 }

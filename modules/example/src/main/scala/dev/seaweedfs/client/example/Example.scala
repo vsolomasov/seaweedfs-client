@@ -6,7 +6,9 @@ import dev.seaweedfs.client.domain.SeaweedFSConfig
 import dev.seaweedfs.client.http4s.SeaweedFS
 import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
 
+import java.util.concurrent.TimeUnit
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.FiniteDuration
 
 object Example extends IOApp with LifeCycle with Ttl {
   val config: SeaweedFSConfig = SeaweedFSConfig("127.0.0.1", 9333)
@@ -21,7 +23,7 @@ object Example extends IOApp with LifeCycle with Ttl {
     Slf4jLogger.create[F].flatMap { implicit logger =>
       SeaweedFS.make[F](config)(context, blocker).use { implicit commands =>
         lifeCycle[F](commands, "modules/example/src/main/resources/inst.png") *>
-          ttl[F](commands, "modules/example/src/main/resources/inst.png", 1)
+          ttl[F](commands, "modules/example/src/main/resources/inst.png", FiniteDuration(1, TimeUnit.MINUTES))
       }
     }
   }
