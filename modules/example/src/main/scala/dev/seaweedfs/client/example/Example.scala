@@ -11,7 +11,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
 object Example extends IOApp with LifeCycle with Ttl {
-  val config: SeaweedFSConfig = SeaweedFSConfig("127.0.0.1", 9333)
+  val config: SeaweedFSConfig = SeaweedFSConfig("http", "127.0.0.1", 9333, usePublicUrl = true)
 
   override def run(args: List[String]): IO[ExitCode] = Blocker[IO].use {
     execute[IO](config)(executionContext, _).map(_ => ExitCode.Success)

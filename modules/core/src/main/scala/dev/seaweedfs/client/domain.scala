@@ -2,8 +2,8 @@ package dev.seaweedfs.client
 
 object domain {
 
-  case class SeaweedFSConfig(host: String, port: Int) {
-    val origin: String = s"$host:$port"
+  case class SeaweedFSConfig(schema: String, host: String, port: Int, usePublicUrl: Boolean = false) {
+    val origin: String = s"$schema://$host:$port"
   }
 
   case class ResponseError(code: Int, reason: String) extends Exception {

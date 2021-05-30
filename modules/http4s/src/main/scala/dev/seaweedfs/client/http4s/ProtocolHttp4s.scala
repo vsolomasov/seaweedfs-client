@@ -36,7 +36,7 @@ private[http4s] class ProtocolHttp4s[F[_]: JsonDecoder: BracketThrow: Logger] pr
 
   override def getAssign(ttl: Option[FiniteDuration]): F[AssignInfo] = {
     for {
-      rawUri <- Uri.fromString(s"http://${seaweedFSConfig.origin}/dir/assign").liftTo[F]
+      rawUri <- Uri.fromString(s"${seaweedFSConfig.origin}/dir/assign").liftTo[F]
       uri = ttl.fold(rawUri)(ttl => rawUri.withQueryParam("ttl", s"${ttl.toMinutes}m"))
       request <- GET(uri)
       response <- runWithLog[AssignInfo](request) {
@@ -50,7 +50,7 @@ private[http4s] class ProtocolHttp4s[F[_]: JsonDecoder: BracketThrow: Logger] pr
     for {
       fileData <- fileUtil.createPart(file)
       multipart = Multipart[F](Vector(fileData))
-      rawUri <- Uri.fromString(s"${assignInfo.publicUrl}/${assignInfo.fid}").liftTo[F]
+      rawUri <- Uri.fromString(s"${assignInfo.getOrigin(seaweedFSConfig)}/${assignInfo.fid}").liftTo[F]
       uri = ttl.fold(rawUri)(ttl => rawUri.withQueryParam("ttl", s"${ttl.toMinutes}m"))
       request <- POST(multipart, uri)
       response <- runWithLog[WriteInfo](request.withHeaders(multipart.headers)) {
@@ -62,7 +62,7 @@ private[http4s] class ProtocolHttp4s[F[_]: JsonDecoder: BracketThrow: Logger] pr
 
   override def location(volumeId: String): F[LocationInfo] = {
     for {
-      uri <- Uri.fromString(s"http://${seaweedFSConfig.origin}/dir/lookup?volumeId=$volumeId").liftTo[F]
+      uri <- Uri.fromString(s"${seaweedFSConfig.origin}/dir/lookup?volumeId=$volumeId").liftTo[F]
       request <- GET(uri)
       result <- runWithLog[LocationInfo](request) {
         case response if response.status == Status.Ok => response.asJsonDecode[LocationInfo]
@@ -73,7 +73,7 @@ private[http4s] class ProtocolHttp4s[F[_]: JsonDecoder: BracketThrow: Logger] pr
 
   override def remove(fid: String, location: Location): F[Unit] = {
     for {
-      uri <- Uri.fromString(s"${location.publicUrl}/$fid").liftTo[F]
+      uri <- Uri.fromString(s"${location.getOrigin(seaweedFSConfig)}/$fid").liftTo[F]
       request <- DELETE(uri)
       _ <- runWithLog[Unit](request) {
         case response if response.status == Status.Accepted => ().pure[F]
@@ -84,7 +84,7 @@ private[http4s] class ProtocolHttp4s[F[_]: JsonDecoder: BracketThrow: Logger] pr
 
   override def extract(fid: String, location: Location): F[File] = {
     for {
-      uri <- Uri.fromString(s"${location.publicUrl}/$fid").liftTo[F]
+      uri <- Uri.fromString(s"${location.getOrigin(seaweedFSConfig)}/$fid").liftTo[F]
       request <- GET(uri)
       file <- runWithLog[File](request) {
         case response if response.status == Status.Ok => fileUtil.save(response.body)
